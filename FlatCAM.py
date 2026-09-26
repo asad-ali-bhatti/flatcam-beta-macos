@@ -1,10 +1,48 @@
 import sys
 import os
 
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import QSettings, Qt
 from app_Main import App
 from appGUI import VisPyPatches
+
+# Qt 5.15 segfaults in QScrollArea::ensureWidgetVisible() when takeWidget() reparents
+# a widget whose child still has focus. Move focus out of the scroll area first.
+_orig_take_widget = QtWidgets.QScrollArea.takeWidget
+
+
+def _safe_take_widget(self):
+    w = self.widget()
+    if w is not None:
+        focused = QtWidgets.QApplication.focusWidget()
+        if focused is not None and (focused is w or w.isAncestorOf(focused)):
+            focused.clearFocus()
+            self.setFocus()
+    return _orig_take_widget(self)
+
+
+QtWidgets.QScrollArea.takeWidget = _safe_take_widget
+
+
+# PyQt5 aborts the whole app on any unhandled exception raised in a slot or Qt virtual
+# (e.g. an empty entry fed to float()). Print the traceback and keep running instead.
+def _log_unhandled(exc_type, exc_value, exc_tb):
+    import traceback
+    traceback.print_exception(exc_type, exc_value, exc_tb)
+
+
+sys.excepthook = _log_unhandled
+
+
+# On macOS QFormLayout defaults to FieldsStayAtSizeHint; FlatCAM's spinners use an 'Ignored'
+# horizontal size policy, so they collapse to zero width (e.g. Panelize Columns/Rows).
+class _GrowingFormLayout(QtWidgets.QFormLayout):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setFieldGrowthPolicy(QtWidgets.QFormLayout.AllNonFixedFieldsGrow)
+
+
+QtWidgets.QFormLayout = _GrowingFormLayout
 
 from multiprocessing import freeze_support
 # import copyreg
@@ -83,6 +121,8 @@ if __name__ == '__main__':
         QtWidgets.QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, False)
 
     app = QtWidgets.QApplication(sys.argv)
+    # on macOS this also sets the Dock icon (otherwise the generic Python icon is shown)
+    app.setWindowIcon(QtGui.QIcon('assets/resources/flatcam_icon256.png'))
 
     # apply style
     settings = QSettings("Open Source", "FlatCAM")

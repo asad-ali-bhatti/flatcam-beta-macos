@@ -159,11 +159,17 @@ class ToolCalculator(AppTool):
         self.ui.effectiveToolDia_entry.set_value(self.app.dec_format(tool_diameter, self.decimals))
 
     def on_calculate_inch_units(self):
-        mm_val = float(self.ui.mm_entry.get_value())
+        mm_val = self.ui.mm_entry.get_value()
+        if mm_val is None:
+            return
+        mm_val = float(mm_val)
         self.ui.inch_entry.set_value('%.*f' % (self.decimals, (mm_val / 25.4)))
 
     def on_calculate_mm_units(self):
-        inch_val = float(self.ui.inch_entry.get_value())
+        inch_val = self.ui.inch_entry.get_value()
+        if inch_val is None:
+            return
+        inch_val = float(inch_val)
         self.ui.mm_entry.set_value('%.*f' % (self.decimals, (inch_val * 25.4)))
 
     def on_calculate_eplate(self):

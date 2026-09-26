@@ -210,13 +210,22 @@ class FCTree(QtWidgets.QTreeWidget):
             ret_val = False
         return ret_val
 
+    @staticmethod
+    def _readable_color(color):
+        # hard-coded dark header colors are unreadable on a dark (macOS dark mode) palette
+        c = QtGui.QColor(color)
+        bg = QtWidgets.QApplication.palette().color(QtGui.QPalette.Base)
+        if bg.lightness() < 128 and c.lightness() < 128:
+            return QtWidgets.QApplication.palette().color(QtGui.QPalette.Highlight).lighter(150)
+        return c
+
     def addParent(self, parent, title, expanded=False, color=None, font=None):
         item = QtWidgets.QTreeWidgetItem(parent, [title])
         item.setChildIndicatorPolicy(QtWidgets.QTreeWidgetItem.ShowIndicator)
         item.setExpanded(expanded)
         if color is not None:
             # item.setTextColor(0, color) # PyQt4
-            item.setForeground(0, QtGui.QBrush(color))
+            item.setForeground(0, QtGui.QBrush(self._readable_color(color)))
         if font is not None:
             item.setFont(0, font)
         return item
@@ -234,7 +243,7 @@ class FCTree(QtWidgets.QTreeWidget):
 
         if color is not None:
             # item.setTextColor(0, color) # PyQt4
-            item.setForeground(0, QtGui.QBrush(color))
+            item.setForeground(0, QtGui.QBrush(self._readable_color(color)))
 
         if font and font_items:
             try:
